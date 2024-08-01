@@ -1,0 +1,203 @@
+const express = require("express");
+const routes = express.Router();
+const Adminuser = require("./../models/admin");
+const { sendOTP, resendOTP, verifyOTP } = require('otpless-node-js-auth-sdk');
+const multer = require("multer");
+const multerS3 = require("multer-s3");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken"); // Add JWT for authentication
+require("dotenv").config();
+
+// Configure AWS SDK
+const { S3Client } = require("@aws-sdk/client-s3");
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+// Configure multer and multerS3 for image uploads
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: process.env.S3_BUCKET_NAME,
+    acl: "public-read",
+    key: function (req, file, cb) {
+      cb(null, `user_profiles/${Date.now()}_${file.originalname}`);
+    },
+  }),
+});
+
+// Create a new admin user
+routes.post("/", async (req, res) => {
+  try {
+    const data = req.body;
+
+    // Hash the password before saving
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    data.password = hashedPassword;
+
+    // Create a new admin user document using the mongoose model
+    const newAdminUser = new Adminuser(data);
+    
+    // Save the new admin user to the database
+    const response = await newAdminUser.save();
+    console.log("Admin user saved successfully");
+    res.status(200).json(response);
+  } catch (error) {
+    console.log("Error saving admin user", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Update an admin user's profile picture
+routes.put("/profile/:id", upload.single('profile'), async (req, res) => {
+  try {
+    const adminUserId = req.params.id;
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: "Profile image is required" });
+    }
+
+    const profileUrl = file.location;
+    const updatedAdminUser = await Adminuser.findByIdAndUpdate(adminUserId, { profile: profileUrl }, { new: true });
+    if (!updatedAdminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    console.log("Admin user profile updated successfully");
+    res.status(200).json(updatedAdminUser);
+  } catch (error) {
+    console.log("Error updating admin user profile", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Update an admin user
+routes.put("/:id", async (req, res) => {
+  try {
+    const adminUserId = req.params.id;
+    const updates = req.body;
+    const options = { new: true };
+
+    if (updates.password) {
+      // Hash the password before updating
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    const updatedAdminUser = await Adminuser.findByIdAndUpdate(adminUserId, updates, options).select('-password'); // Exclude password field
+    if (!updatedAdminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    console.log("Admin user updated successfully");
+    res.status(200).json(updatedAdminUser);
+  } catch (error) {
+    console.log("Error updating admin user", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Delete an admin user
+routes.delete("/:id", async (req, res) => {
+  try {
+    const adminUserId = req.params.id;
+
+    const deletedAdminUser = await Adminuser.findByIdAndDelete(adminUserId);
+    if (!deletedAdminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    console.log("Admin user deleted successfully");
+    res.status(200).json({ message: "Admin user deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting admin user", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Admin login route
+routes.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    // Find the admin user by username
+    const adminUser = await Adminuser.findOne({ username });
+
+    if (!adminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    // Compare the provided password with the stored hashed password
+    const isMatch = await bcrypt.compare(password, adminUser.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ id: adminUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.status(200).json({ message: "Login successful", token });
+  } catch (error) {
+    console.log("Error during admin login", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Forgot password route
+routes.post("/forgotpassword", async (req, res) => {
+  const { mobileno } = req.body;
+
+  try {
+    const adminUser = await Adminuser.findOne({ mobileno });
+
+    if (!adminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    const response = await sendOTP(mobileno, null, process.env.Channel, null, null, process.env.Expire_OTP_Time, process.env.OTP_Length, process.env.OTPLESS_CLIENT_ID, process.env.OTPLESS_CLIENT_SECRET);
+
+    adminUser.otpOrderId = response.orderId;
+    await adminUser.save();
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.log("Error sending OTP", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Verify OTP and change password route
+routes.post("/verifyotp", async (req, res) => {
+  const { mobileno, orderId, otp, newPassword } = req.body;
+
+  try {
+    const adminUser = await Adminuser.findOne({ mobileno });
+
+    if (!adminUser) {
+      return res.status(404).json({ error: "Admin user not found" });
+    }
+
+    const response = await verifyOTP(null, mobileno, orderId, otp, process.env.OTPLESS_CLIENT_ID, process.env.OTPLESS_CLIENT_SECRET);
+
+    if (response.status !== "approved") {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    adminUser.password = hashedPassword;
+    adminUser.otpOrderId = undefined;
+    await adminUser.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.log("Error verifying OTP", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+module.exports = routes;
