@@ -68,6 +68,7 @@ routes.post("/resendotp", async (req, res) => {
   }
 });
 
+
 routes.post("/verify", async (req, res) => {
   const { mobileno, orderId, otp } = req.body;
 
@@ -83,7 +84,7 @@ routes.post("/verify", async (req, res) => {
   }
 
   try {
-    // Find user and verify OTP using OTP-less service
+    // Find user by mobile number
     let user = await User.findOne({ mobileno });
 
     if (!user) {
@@ -92,6 +93,7 @@ routes.post("/verify", async (req, res) => {
         .json({ error: "User with this mobile number does not exist" });
     }
 
+    // Verify OTP using OTP-less service
     const response = await verifyOTP(
       null,
       mobileno,
@@ -100,18 +102,73 @@ routes.post("/verify", async (req, res) => {
       process.env.OTPLESS_CLIENT_ID,
       process.env.OTPLESS_CLIENT_SECRET
     );
+
     console.log("response:", response);
 
-    // Update user verification status in the database
-    user.isVerified = true;
-    user.otpOrderId = undefined;
-    await user.save();
+    // Check if OTP verification was successful
+    if (response.isOTPVerified) {
+      // Update user verification status in the database
+      user.isVerified = true;
+      user.otpOrderId = undefined;
+      await user.save();
 
-    res.status(200).json({ message: "User verified successfully" });
+      return res.status(200).json({ message: "User verified successfully" });
+    } else {
+      return res.status(400).json({
+        error: "Wrong OTP",
+        isOTPVerified: response.isOTPVerified,
+        reason: response.reason,
+      });
+    }
   } catch (error) {
     console.log("Error verifying OTP", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+// routes.post("/verify", async (req, res) => {
+//   const { mobileno, orderId, otp } = req.body;
+
+//   console.log("Received mobileno:", mobileno);
+//   console.log("Received otp:", otp);
+
+//   if (!mobileno) {
+//     return res.status(400).json({ error: "mobileno is required" });
+//   }
+
+//   if (!otp) {
+//     return res.status(400).json({ error: "OTP is required" });
+//   }
+
+//   try {
+//     // Find user and verify OTP using OTP-less service
+//     let user = await User.findOne({ mobileno });
+
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ error: "User with this mobile number does not exist" });
+//     }
+
+//     const response = await verifyOTP(
+//       null,
+//       mobileno,
+//       orderId,
+//       otp,
+//       process.env.OTPLESS_CLIENT_ID,
+//       process.env.OTPLESS_CLIENT_SECRET
+//     );
+//     console.log("response:", response);
+
+//     // Update user verification status in the database
+//     user.isVerified = true;
+//     user.otpOrderId = undefined;
+//     await user.save();
+
+//     res.status(200).json({ message: "User verified successfully" });
+//   } catch (error) {
+//     console.log("Error verifying OTP", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
 module.exports = routes;
