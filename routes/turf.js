@@ -1,6 +1,6 @@
 const express = require("express");
 const routes = express.Router();
-const Turf = require("../models/Turf");
+const Turf = require("../models/turf");
 const { S3Client } = require("@aws-sdk/client-s3");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
