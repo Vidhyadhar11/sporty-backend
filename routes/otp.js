@@ -112,7 +112,7 @@ routes.post("/verify", async (req, res) => {
       user.otpOrderId = undefined;
       await user.save();
 
-      return res.status(200).json({ message: "User verified successfully" });
+      return res.status(200).json({ message: "User verified successfully", id: user._id });
     } else {
       return res.status(400).json({
         error: "Wrong OTP",

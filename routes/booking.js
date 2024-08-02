@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const Booking = require("../models/Booking");
-const Turf = require("../models/Turf");
+const Booking = require("../models/booking");
+const Turf = require("../models/turf");
 
 router.post("/", async (req, res) => {
   try {

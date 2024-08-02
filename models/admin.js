@@ -21,11 +21,7 @@ const adminSchema = new mongoose.Schema({
   mobileno: {
     type: String,
     required: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
+  }
 });
 
 // Create User model

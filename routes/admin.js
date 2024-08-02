@@ -1,6 +1,6 @@
 const express = require("express");
 const routes = express.Router();
-const Adminuser = require("./../models/admin");
+const AdminUser = require('../models/admin');
 const { sendOTP, resendOTP, verifyOTP } = require('otpless-node-js-auth-sdk');
 const multer = require("multer");
 const multerS3 = require("multer-s3");
@@ -36,8 +36,8 @@ routes.post("/", async (req, res) => {
     const data = req.body;
 
     // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    data.password = hashedPassword;
+    // const hashedPassword = await bcrypt.hash(data.password, 10);
+    // data.password = hashedPassword;
 
     // Create a new admin user document using the mongoose model
     const newAdminUser = new Adminuser(data);
@@ -120,32 +120,106 @@ routes.delete("/:id", async (req, res) => {
 
 // Admin login route
 routes.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { mobileno } = req.body;
+
+  console.log("Received mobileno:", mobileno);
+
+  if (!mobileno) {
+    return res.status(400).json({ error: "mobileno is required" });
+  }
 
   try {
-    // Find the admin user by username
-    const adminUser = await Adminuser.findOne({ username });
+    // Check if the user exists in the database
+    let user = await AdminUser.findOne({ mobileno });
 
-    if (!adminUser) {
-      return res.status(404).json({ error: "Admin user not found" });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: "User with this mobile number does not exist" });
     }
 
-    // Compare the provided password with the stored hashed password
-    const isMatch = await bcrypt.compare(password, adminUser.password);
+    // Send OTP using OTP-less service
+    const response = await sendOTP(
+      mobileno,
+      null,
+      process.env.Channel,
+      null,
+      null,
+      process.env.Expire_OTP_Time,
+      process.env.OTP_Length,
+      process.env.OTPLESS_CLIENT_ID,
+      process.env.OTPLESS_CLIENT_SECRET
+    );
+    console.log("response:", response);
 
-    if (!isMatch) {
-      return res.status(400).json({ error: "Invalid credentials" });
-    }
+    user.otpOrderId = response.orderId;
+    await user.save();
 
-    // Generate a JWT token
-    const token = jwt.sign({ id: adminUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-    res.status(200).json({ message: "Login successful", token });
+    res
+      .status(200)
+      .json({ message: "OTP sent successfully", orderId: response.orderId });
   } catch (error) {
-    console.log("Error during admin login", error);
+    console.log("Error sending OTP", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+routes.post('/login/verify', async (req, res) => {
+  const { mobileno, orderId, otp } = req.body;
+
+  console.log("Received mobileno:", mobileno);
+  console.log("Received otp:", otp);
+
+  if (!mobileno) {
+    return res.status(400).json({ error: "mobileno is required" });
+  }
+
+  if (!otp) {
+    return res.status(400).json({ error: "OTP is required" });
+  }
+
+  try {
+    // Find user by mobile number
+    let user = await AdminUser.findOne({ mobileno });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ error: "User with this mobile number does not exist" });
+    }
+
+    // Verify OTP using OTP-less service
+    const response = await verifyOTP(
+      null,
+      mobileno,
+      orderId,
+      otp,
+      process.env.OTPLESS_CLIENT_ID,
+      process.env.OTPLESS_CLIENT_SECRET
+    );
+
+    console.log("response:", response);
+
+    // Check if OTP verification was successful
+    if (response.isOTPVerified) {
+      // Update user verification status in the database
+      user.isVerified = true;
+      user.otpOrderId = undefined;
+      await user.save();
+
+      return res.status(200).json({ message: "Admin User verified successfully" });
+    } else {
+      return res.status(400).json({
+        error: "Wrong OTP",
+        isOTPVerified: response.isOTPVerified,
+        reason: response.reason,
+      });
+    }
+  } catch (error) {
+    console.log("Error verifying OTP", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
 
 // Forgot password route
 routes.post("/forgotpassword", async (req, res) => {
