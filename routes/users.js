@@ -83,10 +83,10 @@ routes.get("/", async (req, res) => {
 });
 
 // Get a specific user by ID
-routes.get("/:id", async (req, res) => {
+routes.get("/:mobileNo", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId).select(
+    const mobileno = req.params.mobileNo;
+    const user = await User.findOne({mobileno: mobileno}).select(
       "-otp -otpExpires -isVerified"
     );
 
