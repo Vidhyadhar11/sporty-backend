@@ -7,6 +7,7 @@ const multerS3 = require("multer-s3");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken"); // Add JWT for authentication
 require("dotenv").config();
+const { authenticateToken } = require('../config/authenticate');
 
 // Configure AWS SDK
 const { S3Client } = require("@aws-sdk/client-s3");
@@ -41,7 +42,7 @@ routes.post("/", async (req, res) => {
 
     // Create a new admin user document using the mongoose model
     const newAdminUser = new Adminuser(data);
-    
+
     // Save the new admin user to the database
     const response = await newAdminUser.save();
     console.log("Admin user saved successfully");
@@ -62,7 +63,7 @@ routes.put("/profile/:id", upload.single('profile'), async (req, res) => {
     }
 
     const profileUrl = file.location;
-    const updatedAdminUser = await Adminuser.findByIdAndUpdate(adminUserId, { profile: profileUrl }, { new: true });
+    const updatedAdminUser = await AdminUser.findByIdAndUpdate(adminUserId, { profile: profileUrl }, { new: true });
     if (!updatedAdminUser) {
       return res.status(404).json({ error: "Admin user not found" });
     }
@@ -76,18 +77,14 @@ routes.put("/profile/:id", upload.single('profile'), async (req, res) => {
 });
 
 // Update an admin user
-routes.put("/:id", async (req, res) => {
+routes.put("/:id", async (req, res, next) => {
   try {
     const adminUserId = req.params.id;
     const updates = req.body;
     const options = { new: true };
 
-    if (updates.password) {
-      // Hash the password before updating
-      updates.password = await bcrypt.hash(updates.password, 10);
-    }
 
-    const updatedAdminUser = await Adminuser.findByIdAndUpdate(adminUserId, updates, options).select('-password'); // Exclude password field
+    const updatedAdminUser = await AdminUser.findByIdAndUpdate(adminUserId, updates, options);
     if (!updatedAdminUser) {
       return res.status(404).json({ error: "Admin user not found" });
     }
@@ -105,7 +102,7 @@ routes.delete("/:id", async (req, res) => {
   try {
     const adminUserId = req.params.id;
 
-    const deletedAdminUser = await Adminuser.findByIdAndDelete(adminUserId);
+    const deletedAdminUser = await AdminUser.findByIdAndDelete(adminUserId);
     if (!deletedAdminUser) {
       return res.status(404).json({ error: "Admin user not found" });
     }
@@ -206,7 +203,13 @@ routes.post('/login/verify', async (req, res) => {
       user.isVerified = true;
       user.otpOrderId = undefined;
       await user.save();
-
+      //create jwt token
+      // const token = jwt.sign(
+      //   { id: user._id, mobileno: user.mobileno },
+      //   process.env.JWT_SECRET,
+      //   { expiresIn: '1h' }
+      // );
+      // res.setHeader('authorization', `Bearer ${token}`);
       return res.status(200).json({ message: "Admin User verified successfully" });
     } else {
       return res.status(400).json({
@@ -226,7 +229,7 @@ routes.post("/forgotpassword", async (req, res) => {
   const { mobileno } = req.body;
 
   try {
-    const adminUser = await Adminuser.findOne({ mobileno });
+    const adminUser = await AdminUser.findOne({ mobileno });
 
     if (!adminUser) {
       return res.status(404).json({ error: "Admin user not found" });
@@ -249,7 +252,7 @@ routes.post("/verifyotp", async (req, res) => {
   const { mobileno, orderId, otp, newPassword } = req.body;
 
   try {
-    const adminUser = await Adminuser.findOne({ mobileno });
+    const adminUser = await AdminUser.findOne({ mobileno });
 
     if (!adminUser) {
       return res.status(404).json({ error: "Admin user not found" });

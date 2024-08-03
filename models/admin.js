@@ -14,13 +14,21 @@ const adminSchema = new mongoose.Schema({
     default:
       "https://aws-cloudtrail-logs-992382539042-31af9dfb.s3.ap-south-1.amazonaws.com/user_profiles/profile_default.jpg",
   },
-  username: {
-    type: String,
-    required: true,
-  },
   mobileno: {
     type: String,
     required: true,
+  },
+  ifscCode: {
+    type: String,
+    required: true
+  },
+  accountNumber : {
+    type: String,
+    required: true
+  },
+  accountName : {
+    type: String,
+    required : true
   }
 });
 
