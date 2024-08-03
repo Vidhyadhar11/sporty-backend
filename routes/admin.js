@@ -41,7 +41,7 @@ routes.post("/", async (req, res) => {
     // data.password = hashedPassword;
 
     // Create a new admin user document using the mongoose model
-    const newAdminUser = new Adminuser(data);
+    const newAdminUser = new AdminUser(data);
 
     // Save the new admin user to the database
     const response = await newAdminUser.save();
@@ -119,7 +119,7 @@ routes.delete("/:id", async (req, res) => {
 routes.post("/login", async (req, res) => {
   const { mobileno } = req.body;
 
-  console.log("Received mobileno:", mobileno);
+  console.log("Received mobileno: ", mobileno);
 
   if (!mobileno) {
     return res.status(400).json({ error: "mobileno is required" });
@@ -157,6 +157,25 @@ routes.post("/login", async (req, res) => {
       .json({ message: "OTP sent successfully", orderId: response.orderId });
   } catch (error) {
     console.log("Error sending OTP", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+routes.post("/login/resendotp", async (req, res) => {
+  const { orderId } = req.body;
+
+  try {
+    // Resend OTP using OTP-less service
+    const response = await resendOTP(
+      orderId,
+      process.env.OTPLESS_CLIENT_ID,
+      process.env.OTPLESS_CLIENT_SECRET
+    );
+    console.log("response:", response);
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    console.log("Error resending OTP", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -203,13 +222,7 @@ routes.post('/login/verify', async (req, res) => {
       user.isVerified = true;
       user.otpOrderId = undefined;
       await user.save();
-      //create jwt token
-      // const token = jwt.sign(
-      //   { id: user._id, mobileno: user.mobileno },
-      //   process.env.JWT_SECRET,
-      //   { expiresIn: '1h' }
-      // );
-      // res.setHeader('authorization', `Bearer ${token}`);
+
       return res.status(200).json({ message: "Admin User verified successfully" });
     } else {
       return res.status(400).json({

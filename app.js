@@ -22,14 +22,16 @@ const turfRoutes = require("./routes/turf");
 const bookRoutes = require("./routes/booking");
 const communityRoutes = require("./routes/community");
 const otpRoutes = require("./routes/otp");
+const paymentRoutes = require('./routes/payments');
 
 // Use the routes
 app.use("/admin", adminuser);
 app.use("/users", userRoutes);
 app.use("/turf", turfRoutes);
-app.use("/book", bookRoutes);
+app.use("/booking", bookRoutes);
 app.use("/community-group", communityRoutes);
 app.use("/", otpRoutes);
+app.use('/payments', paymentRoutes);
 
 // Server Start
 app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
