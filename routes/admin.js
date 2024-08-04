@@ -223,7 +223,10 @@ routes.post('/login/verify', async (req, res) => {
       user.otpOrderId = undefined;
       await user.save();
 
-      return res.status(200).json({ message: "Admin User verified successfully" });
+      return res.status(200).json({
+        message: "Admin User verified successfully",
+        isVerified: user.isVerified,
+      });
     } else {
       return res.status(400).json({
         error: "Wrong OTP",
