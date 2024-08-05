@@ -53,6 +53,21 @@ routes.post("/", async (req, res) => {
   }
 });
 
+// Get an admin user by mobile number
+routes.get('/:mobileno', async (req, res) => {
+  try {
+    const mobileno = "+91"+req.params.mobileno;
+    const adminUser = await AdminUser.findOne({ mobileno: mobileno });
+    if (!adminUser) {
+      return res.status(404).json({ message: "Admin user not found" });
+    }
+    res.status(200).json(adminUser);
+  } catch (error) {
+    console.log("Error retrieving admin user", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Update an admin user's profile picture
 routes.put("/profile/:id", upload.single('profile'), async (req, res) => {
   try {

@@ -80,6 +80,43 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/playWithStrangers", async (req, res) => {
+  try {
+    const bookings = await Booking.find({ playWithStranger: true });//.populate('turfId', 'turfName location');
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/pastBookings", async (req, res) => {
+  try {
+    const now = new Date();
+    const currentTime = now.getTime();
+    const bookings = await Booking.find({ date: { $lt: now, $lt: currentTime } })
+      .populate('turfId', 'turfName location')
+      .sort({ date: -1 }); // Sort by date in descending order to get the most recent bookings first
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/upcomingBookings", async (req, res) => {
+  try {
+    const now = new Date();
+    const bookings = await Booking.find({ date: { $gte: now } })
+      .sort({ date: 1 })
+      .populate('turfId', 'turfName location');
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/join", async (req, res) => {
   try {
     const { bookingId, userId, name } = req.body;
