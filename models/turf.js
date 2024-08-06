@@ -36,7 +36,7 @@ const turfSchema = new mongoose.Schema({
   },
   amenties: {
     type: [String], // Store as an array of strings
-    required: true,
+    required: false,
   },
   rating: {
     type: Number,
