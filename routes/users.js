@@ -32,6 +32,7 @@ const upload = multer({
 routes.post("/", async (req, res) => {
   try {
     const data = req.body; // Assuming the request body contains the user data
+    data.mobileno = "+91"+req.body.mobileno;
     const newUser = new User(data);
     const response = await newUser.save();
     console.log("Data Saved Successfully");
