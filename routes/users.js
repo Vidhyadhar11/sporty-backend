@@ -39,7 +39,7 @@ routes.post("/", async (req, res) => {
     res.status(200).json(response);
   } catch (error) {
     console.log("Error Saving user", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: error });
   }
 });
 
