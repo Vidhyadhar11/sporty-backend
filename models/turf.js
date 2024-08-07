@@ -6,7 +6,7 @@ const turfSchema = new mongoose.Schema({
     default:
       "https://aws-cloudtrail-logs-992382539042-31af9dfb.s3.ap-south-1.amazonaws.com/turf_images/truf_default.jpg",
   },
-  ownerid: {
+  onwerMobileNo: {
     type: String,
     required: true,
   },
