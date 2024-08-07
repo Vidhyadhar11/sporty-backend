@@ -5,7 +5,7 @@ const { sendOTP, resendOTP, verifyOTP } = require("otpless-node-js-auth-sdk");
 require("dotenv").config();
 
 routes.post("/sendotp", async (req, res) => {
-  const mobileno  = "+91"+req.body.mobileno;
+  const mobileno  = req.body.mobileno;
   // const mobileNo = req.body.mobileno;
 
   console.log("Received mobileno:", mobileno);
