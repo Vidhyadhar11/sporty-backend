@@ -93,9 +93,7 @@ routes.get("/:id", async (req, res) => {
 routes.get("/owner/:mobileNo", async (req, res) => {
   try {
     const mobileNo = "+91" + req.params.mobileNo;
-    console.log(mobileNo);
     const turfs = await Turf.find({ ownerMobileNo: mobileNo });
-    console.log(turfs);
 
     if (!turfs || turfs.length === 0) {
       return res.status(404).json({ error: "No turfs found for the owner" });
