@@ -72,7 +72,7 @@ routes.get("/", async (req, res) => {
 });
 
 // Get a specific turf by ID
-routes.get("/id/:id", async (req, res) => {
+routes.get("/:id", async (req, res) => {
   try {
     const turfId = req.params.id;
     const turf = await Turf.findById(turfId);
@@ -86,6 +86,23 @@ routes.get("/id/:id", async (req, res) => {
   } catch (error) {
     console.log("Error fetching turf details", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get all turfs owned by a specific user
+routes.get("/id/:id", async (req, res) => {
+  try {
+    const ownerid = req.params.id;
+    const turfs = await Turf.find({ owner: ownerid });
+
+    if (!turfs || turfs.length === 0) {
+      return res.status(404).json({ error: "No turfs found for the owner" });
+    }
+
+    res.status(200).json(turfs);
+    console.log("Turfs owned by the user fetched successfully");
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
