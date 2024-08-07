@@ -6,7 +6,7 @@ require("dotenv").config();
 
 routes.post("/sendotp", async (req, res) => {
   const mobileno  = "+91"+req.body.mobileno;
-  const mobileNo = req.body.mobileno;
+  // const mobileNo = req.body.mobileno;
 
   console.log("Received mobileno:", mobileno);
 
@@ -16,7 +16,7 @@ routes.post("/sendotp", async (req, res) => {
 
   try {
     // Check if the user exists in the database
-    let user = await User.findOne({ mobileNo });
+    let user = await User.findOne({ mobileno });
 
     if (!user) {
       return res

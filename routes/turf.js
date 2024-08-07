@@ -92,16 +92,18 @@ routes.get("/:id", async (req, res) => {
 // Get all turfs owned by a specific user
 routes.get("/owner/:mobileNo", async (req, res) => {
   try {
-    const mobileNo = "+91" + req.params.mobileNo;
+    const mobileNo = "+91"+req.params.mobileNo;
     const turfs = await Turf.find({ ownerMobileNo: mobileNo });
 
     if (!turfs || turfs.length === 0) {
+      console.log("No turfs found for the owner:", mobileNo);
       return res.status(404).json({ error: "No turfs found for the owner" });
     }
 
     res.status(200).json(turfs);
     console.log("Turfs owned by the user fetched successfully");
   } catch (err) {
+    console.error("Error fetching turfs for the owner:", mobileNo, err);
     res.status(500).json({ error: err.message });
   }
 });
