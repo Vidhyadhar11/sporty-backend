@@ -6,10 +6,6 @@ const turfSchema = new mongoose.Schema({
     default:
       "https://aws-cloudtrail-logs-992382539042-31af9dfb.s3.ap-south-1.amazonaws.com/turf_images/truf_default.jpg",
   },
-  onwerMobileNo: {
-    type: String,
-    required: true,
-  },
   category: {
     type: String,
     required: true,
@@ -61,6 +57,10 @@ const turfSchema = new mongoose.Schema({
     type: Number, // Add a field for discounts
     required: false,
   },
+  ownerMobileNo: {
+    type: String,
+    required: true
+  }
 });
 
 // Create Turf model
